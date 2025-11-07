@@ -160,22 +160,50 @@ function buildDatasets(rowsNewestFirst, keys, limit = CHART_MAX_LOGS) {
   if (!Array.isArray(rowsNewestFirst) || !rowsNewestFirst.length) return [];
   const rows = [...rowsNewestFirst.slice(0, limit)].reverse(); // oldest→newest
 
+  // Define a color palette for different series
+  const colorPalette = {
+    // Temperature and Environmental
+    'Temp': '#FF5252',           // Red
+    'Humidity': '#2196F3',       // Blue
+    'Wind Speed': '#00BCD4',     // Cyan
+    
+    // Voltage measurements
+    'Solar Voltage': '#FF9800',  // Orange
+    'Battery Voltage': '#4CAF50', // Green
+    'System Voltage': '#9C27B0',  // Purple
+    
+    // Current measurements
+    'Solar Current': '#FF9800',   // Orange
+    'Battery Current': '#4CAF50', // Green
+    'System Current': '#9C27B0',  // Purple
+    
+    // Power measurements 
+    'Solar Power': '#FF9800',     // Orange
+    'Battery Power': '#4CAF50',  // Green
+    'System Power': '#9C27B0'    // Purple
+  };
+
   return keys.map(key => {
     const data = rows.map(r => {
       const d = new Date(r.timestamp.replace(' ', 'T'));
       const y = getNumericValue(r, key);
       const point = (!isNaN(d) && Number.isFinite(y)) ? { x: d, y } : { x: d, y: NaN };
-      console.log(`Processing ${key}: ${y}`); // Debug logging
       return point;
     });
+
+    // Get the color for this series from the palette, or generate one if not found
+    const color = colorPalette[key] || '#' + Math.floor(Math.random()*16777215).toString(16);
+    
     return { 
-      label: DISPLAY_NAMES[key.toLowerCase()] || key, // Use friendly name if available
+      label: DISPLAY_NAMES[key.toLowerCase()] || key,
       data,
       borderWidth: 2,
-      fill: false, // Add this to make lines more visible
-      borderColor: key.includes('Voltage') ? '#2196F3' : 
-                  key.includes('Current') ? '#4CAF50' : 
-                  key.includes('Power') ? '#FFC107' : '#FF5722'
+      fill: false,
+      borderColor: color,
+      backgroundColor: color,
+      tension: 0.3, // Add slight curve to lines
+      pointRadius: 0, // Hide points
+      pointHoverRadius: 5, // Show points on hover
     };
   });
 }
@@ -253,22 +281,13 @@ function fetchAndRenderAll() {
       // Compass: latest wind direction (first element = newest)
       updateCompass(rowsNewestFirst[0]);
 
-      // Update power indicators from latest values
+      // Update battery status from latest values
       if (rowsNewestFirst[0]) {
         const latest = rowsNewestFirst[0];
         
         // Update battery voltage and status
         const voltage = getNumericValue(latest, 'Battery Voltage');
         updateBatteryIndicator(voltage);
-        
-        // Update power values
-        const solarPower = document.getElementById('solar-power');
-        const batteryPower = document.getElementById('battery-power');
-        const systemPower = document.getElementById('system-power');
-        
-        if (solarPower) solarPower.textContent = `${getNumericValue(latest, 'Solar Power').toFixed(3)} W`;
-        if (batteryPower) batteryPower.textContent = `${getNumericValue(latest, 'Battery Power').toFixed(3)} W`;
-        if (systemPower) systemPower.textContent = `${getNumericValue(latest, 'System Power').toFixed(3)} W`;
       }
 
       // Left Column - Sensor Charts
@@ -371,12 +390,8 @@ function fetchAndRenderAll() {
 /** Update battery indicator in the header */
 function updateBatteryIndicator(voltage) {
   const batteryText = document.getElementById('battery-text');
-  // Note: there are two battery-icon elements, one in header and one in power flow
   const batteryIcon = document.querySelector('.battery-status #battery-icon');
   const batteryStatus = document.querySelector('.battery-status');
-  const solarPower = document.getElementById('solar-power');
-  const batteryPower = document.getElementById('battery-power');
-  const systemPower = document.getElementById('system-power');
 
   // Skip update if elements aren't found
   if (!batteryText || !batteryIcon || !batteryStatus) {

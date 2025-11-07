@@ -21,38 +21,7 @@
   <div class="container">
     <div class="header-row">
       <h1>Sensor Log</h1>
-      <div class="power-flow-card">
-        <div class="power-component" id="solar-component">
-          <div class="power-icon">☀️</div>
-          <div class="power-label">Solar</div>
-          <div class="power-value" id="solar-power">-- W</div>
-        </div>
-        <div class="power-component" id="controller-component">
-          <div class="power-icon">🔌</div>
-          <div class="power-label">Controller</div>
-          <div class="power-value" id="system-power">-- W</div>
-        </div>
-        <div class="power-component" id="battery-component">
-          <div class="power-icon">🔋</div>
-          <div class="power-label">Battery</div>
-          <div class="power-value" id="battery-power">-- W</div>
-        </div>
-        <div class="power-flow-arrows">
-          <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#1a4f78"/>
-              </marker>
-            </defs>
-            <!-- Solar to Controller arrow -->
-            <path class="flow-arrow solar-to-controller" d="M80 50 L220 50" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
-            <!-- Controller to Battery arrows -->
-            <path class="flow-arrow controller-to-battery-charge" d="M150 65 L150 85 L220 85" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
-            <path class="flow-arrow battery-to-controller-discharge" d="M220 85 L150 85 L150 65" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
-          </svg>
-        </div>
-      </div>
-      <div class="compass-card small">
+      <div class="compass-card">
         <div class="compass">
           <div class="compass-arrow" id="compass-arrow"></div>
           <div class="compass-label">N</div>
