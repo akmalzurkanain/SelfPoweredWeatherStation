@@ -265,10 +265,9 @@ function updateCompass(latestRow) {
 
   console.log('Updating compass with direction:', direction); // Debug logging
 
-  // rotate compass
-  arrow.style.transform = `translate(-50%, -50%) rotate(${direction}deg)`;
+  // rotate compass - only apply translateX and rotation
+  arrow.style.transform = `translateX(-50%) rotate(${direction}deg)`;
   valueEl.textContent = `Wind Direction: ${direction.toFixed(0)}°`;
-  
 }
 
 

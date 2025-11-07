@@ -147,13 +147,13 @@ h1 {
 
 .compass-arrow {
     position: absolute;
-    top: 50%;
+    top: 10%;
     left: 50%;
     width: 3px;
     height: 40%;
     background: #1a4f78;
-    transform-origin: bottom center;
-    transform: translate(-50%, -100%) rotate(0deg);
+    transform-origin: center bottom;
+    transform: translateX(-50%) rotate(0deg);
     transition: transform 0.5s ease-in-out;
 }
 
