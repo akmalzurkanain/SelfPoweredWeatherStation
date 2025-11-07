@@ -32,50 +32,62 @@
 
     <div class="chart-columns">
       <!-- Left Column - Sensor Charts -->
-      <div class="chart-column">
-        <div class="chart-card">
-          <canvas id="chartTemp"></canvas>
-          <p class="chart-label">Temperature</p>
+      <div class="chart-column sensor-column">
+        <div class="section-header">
+          <span class="section-icon">🌡️</span>
+          <h2>Environmental Sensors</h2>
         </div>
-        <div class="chart-card">
-          <canvas id="chartHumid"></canvas>
-          <p class="chart-label">Humidity</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartPress"></canvas>
-          <p class="chart-label">Pressure</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartGas"></canvas>
-          <p class="chart-label">Air Quality</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartUV"></canvas>
-          <p class="chart-label">UV Index</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartWind"></canvas>
-          <p class="chart-label">Wind Speed</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartRain"></canvas>
-          <p class="chart-label">Rain Amount</p>
+        <div class="section-content">
+          <div class="chart-card">
+            <canvas id="chartTemp"></canvas>
+            <p class="chart-label">Temperature</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartHumid"></canvas>
+            <p class="chart-label">Humidity</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartPress"></canvas>
+            <p class="chart-label">Pressure</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartGas"></canvas>
+            <p class="chart-label">Air Quality</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartUV"></canvas>
+            <p class="chart-label">UV Index</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartWind"></canvas>
+            <p class="chart-label">Wind Speed</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartRain"></canvas>
+            <p class="chart-label">Rain Amount</p>
+          </div>
         </div>
       </div>
 
       <!-- Right Column - Power Charts -->
-      <div class="chart-column">
-        <div class="chart-card">
-          <canvas id="chartVoltage"></canvas>
-          <p class="chart-label">System Voltages</p>
+      <div class="chart-column power-column">
+        <div class="section-header">
+          <span class="section-icon">⚡</span>
+          <h2>Power System</h2>
         </div>
-        <div class="chart-card">
-          <canvas id="chartCurrent"></canvas>
-          <p class="chart-label">System Currents</p>
-        </div>
-        <div class="chart-card">
-          <canvas id="chartPower"></canvas>
-          <p class="chart-label">Power Consumption</p>
+        <div class="section-content">
+          <div class="chart-card">
+            <canvas id="chartVoltage"></canvas>
+            <p class="chart-label">System Voltages</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartCurrent"></canvas>
+            <p class="chart-label">System Currents</p>
+          </div>
+          <div class="chart-card">
+            <canvas id="chartPower"></canvas>
+            <p class="chart-label">Power Consumption</p>
+          </div>
         </div>
       </div>
     </div>
