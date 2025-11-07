@@ -16,7 +16,7 @@ const DISPLAY_NAMES = {
   temp: 'Temperature (°C)',
   humid: 'Humidity (%)',
   press: 'Barometric Pressure (hPa)',
-  gas: 'Gas Level (ppm)',
+  gas: 'Air Quality (AQI)',
   uv: 'UV Index',
   
   // Wind & Rain
@@ -48,7 +48,11 @@ const DISPLAY_NAMES = {
 // Left column - Sensor charts
 const TEMP_KEYS = ['Temp'];
 const HUMID_KEYS = ['Humidity'];
+const PRESS_KEYS = ['Pressure'];
+const GAS_KEYS = ['Gas'];
+const UV_KEYS = ['UV'];
 const WIND_KEYS = ['Wind Speed'];
+const RAIN_KEYS = ['Rainfall Amount'];
 
 // Right column - Power system charts
 const VOLTAGE_KEYS = ['Solar Voltage', 'Battery Voltage', 'System Voltage'];
@@ -165,7 +169,11 @@ function buildDatasets(rowsNewestFirst, keys, limit = CHART_MAX_LOGS) {
     // Temperature and Environmental
     'Temp': '#FF5252',           // Red
     'Humidity': '#2196F3',       // Blue
+    'Pressure': '#795548',       // Brown
+    'Gas': '#607D8B',           // Blue Grey
+    'UV': '#FFC107',            // Amber
     'Wind Speed': '#00BCD4',     // Cyan
+    'Rainfall Amount': '#3F51B5', // Indigo
     
     // Voltage measurements
     'Solar Voltage': '#FF9800',  // Orange
@@ -293,7 +301,11 @@ function fetchAndRenderAll() {
       // Left Column - Sensor Charts
       const tempChart = ensureChartFor('chartTemp');
       const humidChart = ensureChartFor('chartHumid');
+      const pressChart = ensureChartFor('chartPress');
+      const gasChart = ensureChartFor('chartGas');
+      const uvChart = ensureChartFor('chartUV');
       const windChart = ensureChartFor('chartWind');
+      const rainChart = ensureChartFor('chartRain');
       
       // Right Column - Power Charts
       const voltageChart = ensureChartFor('chartVoltage');
@@ -325,6 +337,41 @@ function fetchAndRenderAll() {
         humidChart.update('none');
       }
 
+      if (pressChart) {
+        pressChart.options.scales.y = {
+          beginAtZero: false,
+          grace: '5%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, PRESS_KEYS);
+        pressChart.data.datasets = ds;
+        applyDailyWindow(pressChart);
+        pressChart.update('none');
+      }
+
+      if (gasChart) {
+        gasChart.options.scales.y = {
+          beginAtZero: true,
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, GAS_KEYS);
+        gasChart.data.datasets = ds;
+        applyDailyWindow(gasChart);
+        gasChart.update('none');
+      }
+
+      if (uvChart) {
+        uvChart.options.scales.y = {
+          beginAtZero: true,
+          min: 0,
+          max: 11,
+          grace: '5%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, UV_KEYS);
+        uvChart.data.datasets = ds;
+        applyDailyWindow(uvChart);
+        uvChart.update('none');
+      }
+
       if (windChart) {
         windChart.options.scales.y = {
           beginAtZero: true,
@@ -334,6 +381,17 @@ function fetchAndRenderAll() {
         windChart.data.datasets = ds;
         applyDailyWindow(windChart);
         windChart.update('none');
+      }
+
+      if (rainChart) {
+        rainChart.options.scales.y = {
+          beginAtZero: true,
+          grace: '5%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, RAIN_KEYS);
+        rainChart.data.datasets = ds;
+        applyDailyWindow(rainChart);
+        rainChart.update('none');
       }
 
       // Update Power Charts
@@ -413,10 +471,10 @@ function updateBatteryIndicator(voltage) {
     batteryStatus.classList.remove('battery-full', 'battery-medium', 'battery-low');
 
     // Set icon and color based on % charge
-    if (clamped > 70) {
+    if (clamped > 50) {
       batteryIcon.textContent = "🔋"; // Full
       batteryStatus.classList.add('battery-full');
-    } else if (clamped > 40) {
+    } else if (clamped > 30) {
       batteryIcon.textContent = "🪫"; // Medium
       batteryStatus.classList.add('battery-medium');
     } else {

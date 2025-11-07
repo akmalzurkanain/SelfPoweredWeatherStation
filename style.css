@@ -744,7 +744,7 @@ tbody tr:last-child td {
 }
 
 .battery-status {
-  margin-right: 32px;
+  margin-right: 60px;
   display: flex;
   align-items: center;
   font-size: 1rem;
