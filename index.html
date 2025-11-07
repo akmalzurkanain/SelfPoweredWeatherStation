@@ -5,23 +5,53 @@
   <meta charset="utf-8" />
   <title>ESP32 Sensor Log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="stylenew.css" />
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 </head>
 
-<header class="top-header">
-  <h2 class="site-title">ISPRO Weather Station</h2>
-  <div class="battery-status">
-    <span id="battery-icon">🔋</span>
-    <span id="battery-text">-- V</span>
-  </div>
-</header>
-
 <body>
+  <header class="top-header">
+    <h2 class="site-title">ISPRO Weather Station</h2>
+    <div class="battery-status">
+      <span id="battery-icon">🔋</span>
+      <span id="battery-text">-- V</span>
+    </div>
+  </header>
   <div class="container">
     <div class="header-row">
       <h1>Sensor Log</h1>
+      <div class="power-flow-card">
+        <div class="power-component" id="solar-component">
+          <div class="power-icon">☀️</div>
+          <div class="power-label">Solar</div>
+          <div class="power-value" id="solar-power">-- W</div>
+        </div>
+        <div class="power-component" id="controller-component">
+          <div class="power-icon">🔌</div>
+          <div class="power-label">Controller</div>
+          <div class="power-value" id="system-power">-- W</div>
+        </div>
+        <div class="power-component" id="battery-component">
+          <div class="power-icon">🔋</div>
+          <div class="power-label">Battery</div>
+          <div class="power-value" id="battery-power">-- W</div>
+        </div>
+        <div class="power-flow-arrows">
+          <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#1a4f78"/>
+              </marker>
+            </defs>
+            <!-- Solar to Controller arrow -->
+            <path class="flow-arrow solar-to-controller" d="M80 50 L220 50" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
+            <!-- Controller to Battery arrows -->
+            <path class="flow-arrow controller-to-battery-charge" d="M150 65 L150 85 L220 85" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
+            <path class="flow-arrow battery-to-controller-discharge" d="M220 85 L150 85 L150 65" stroke="#1a4f78" stroke-width="2" marker-end="url(#arrowhead)" style="display: none;"/>
+          </svg>
+        </div>
+      </div>
       <div class="compass-card small">
         <div class="compass">
           <div class="compass-arrow" id="compass-arrow"></div>
@@ -31,39 +61,64 @@
       </div>
     </div>
 
-    <div class="chart-row">
-      <div class="chart-card">
-        <canvas id="chartEnv"></canvas>
-        <p class="chart-label">Environment Metrics</p>
+    <div class="chart-columns">
+      <!-- Left Column - Sensor Charts -->
+      <div class="chart-column">
+        <div class="chart-card">
+          <canvas id="chartTemp"></canvas>
+          <p class="chart-label">Temperature</p>
+        </div>
+        <div class="chart-card">
+          <canvas id="chartHumid"></canvas>
+          <p class="chart-label">Humidity</p>
+        </div>
+        <div class="chart-card">
+          <canvas id="chartWind"></canvas>
+          <p class="chart-label">Wind Speed</p>
+        </div>
       </div>
-      <div class="chart-card">
-        <canvas id="chartPower"></canvas>
-        <p class="chart-label">Power Metrics</p>
+
+      <!-- Right Column - Power Charts -->
+      <div class="chart-column">
+        <div class="chart-card">
+          <canvas id="chartVoltage"></canvas>
+          <p class="chart-label">System Voltages</p>
+        </div>
+        <div class="chart-card">
+          <canvas id="chartCurrent"></canvas>
+          <p class="chart-label">System Currents</p>
+        </div>
+        <div class="chart-card">
+          <canvas id="chartPower"></canvas>
+          <p class="chart-label">Power Consumption</p>
+        </div>
       </div>
     </div>
 
-    <div class="chart-row">
-      <div class="chart-card">
-        <canvas id="chartTemp"></canvas>
-        <p class="chart-label">Temperature Metrics</p>
-      </div>
-      <div class="chart-card">
-        <canvas id="chartVoltage"></canvas>
-        <p class="chart-label">Voltage Metrics</p>
+    <div class="table-controls">
+      <div class="table-settings">
+        <label for="recordCount">Show records:</label>
+        <select id="recordCount" onchange="updateTableMaxLogs(this.value); updateRefreshMessage(this.value)">
+          <option value="5">5 records</option>
+          <option value="10" selected>10 records</option>
+          <option value="20">20 records</option>
+          <option value="50">50 records</option>
+          <option value="100">100 records</option>
+        </select>
       </div>
     </div>
 
-    <div style="overflow-x:auto; width:100%;">
+    <div class="table-container">
       <table>
         <thead id="sensor-head"></thead>
         <tbody id="sensor-data-body"></tbody>
       </table>
     </div>
 
-    <p id="refresh-message">Page updates every 10 seconds using AJAX, displaying the latest 3 entries.</p>
+    <p id="refresh-message">Page updates every 10 seconds using AJAX, displaying the latest 10 entries.</p>
   </div>
 
-  <script src="dataRender.js"></script>
+  <script src="dataRender.js" defer></script>
 </body>
 
 </html>

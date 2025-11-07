@@ -1,13 +1,59 @@
 // Config
-const TABLE_MAX_LOGS = 3;          // table rows (newest-first)
+let TABLE_MAX_LOGS = parseInt(localStorage.getItem('tableMaxLogs')) || 10;  // table rows (newest-first)
 const CHART_MAX_LOGS = 6000;       // ~24h at ~15s/sample
 const FETCH_EVERY_MS = 10000;      // fetch cadence (10s)
 
-// Metric groups (display keys; JSON also includes <key>_num for plotting)
-const ENV_KEYS = ['Pressure', 'Wind Speed', 'Rain Detector'];
-const POWER_KEYS = ['Solar Power', 'System Power'];
-const TEMP_KEY = ['Temp'];
-const VOLTAGE_KEY = ['System Voltage'];
+// Function to update table max logs
+function updateTableMaxLogs(value) {
+    TABLE_MAX_LOGS = parseInt(value) || 10;
+    localStorage.setItem('tableMaxLogs', TABLE_MAX_LOGS);
+    fetchAndRenderAll(); // Refresh data immediately
+}
+
+// Display name mapping for better readability in legends, tables, and tooltips
+const DISPLAY_NAMES = {
+  // Environmental Sensors
+  temp: 'Temperature (°C)',
+  humid: 'Humidity (%)',
+  press: 'Barometric Pressure (hPa)',
+  gas: 'Gas Level (ppm)',
+  uv: 'UV Index',
+  
+  // Wind & Rain
+  wspd: 'Wind Speed (m/s)',
+  wdir: 'Wind Direction (°)',
+  raindet: 'Rain Detection',
+  rainamt: 'Rainfall Amount (mm)',
+  
+  // Solar System
+  solvolt: 'Solar Panel Voltage (V)',
+  solcurr: 'Solar Panel Current (mA)',
+  solpwr: 'Solar Power (W)',
+  
+  // Battery System
+  batvolt: 'Battery Voltage (V)',
+  batcurr: 'Battery Current (mA)',
+  batpwr: 'Battery Power (W)',
+  
+  // System Power
+  sysvolt: 'System Voltage (V)',
+  syscurr: 'System Current (mA)',
+  syspwr: 'System Power (W)',
+  
+  // General
+  timestamp: 'Time Stamp'
+};
+
+// Metric groups following sketch layout (6 charts total)
+// Left column - Sensor charts
+const TEMP_KEYS = ['Temp'];
+const HUMID_KEYS = ['Humidity'];
+const WIND_KEYS = ['Wind Speed'];
+
+// Right column - Power system charts
+const VOLTAGE_KEYS = ['Solar Voltage', 'Battery Voltage', 'System Voltage'];
+const CURRENT_KEYS = ['Solar Current', 'Battery Current', 'System Current'];
+const POWER_KEYS = ['Solar Power', 'Battery Power', 'System Power'];
 
 /** Ensure Chart.js instance for given canvas */
 function ensureChartFor(canvasId) {
@@ -15,15 +61,22 @@ function ensureChartFor(canvasId) {
   if (!el) return null;
   if (el._chart) return el._chart;
 
+  // Get the container dimensions for better initial sizing
+  const container = el.parentElement;
+  const containerStyle = window.getComputedStyle(container);
+  const paddingX = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
+  const paddingY = parseFloat(containerStyle.paddingTop) + parseFloat(containerStyle.paddingBottom);
+
   el._chart = new Chart(el, {
     type: 'line',
     data: { datasets: [] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      resizeDelay: 100,
+      resizeDelay: 150,
       animation: false,
       parsing: false,
+      devicePixelRatio: window.devicePixelRatio || 1,
       interaction: {
         mode: 'nearest',
         axis: 'x',
@@ -42,7 +95,22 @@ function ensureChartFor(canvasId) {
         legend: {
           display: true,
           position: 'top',
-          labels: { boxWidth: 16, padding: 10, font: { size: 12 } }
+          labels: { 
+            boxWidth: 16, 
+            padding: 10, 
+            font: { size: 12 },
+            // Use friendly names in legend
+            generateLabels: (chart) => {
+              const datasets = chart.data.datasets;
+              return datasets.map(dataset => ({
+                text: dataset.label,
+                fillStyle: dataset.backgroundColor,
+                strokeStyle: dataset.borderColor,
+                lineWidth: dataset.borderWidth,
+                index: dataset.index
+              }));
+            }
+          }
         },
         tooltip: {
           mode: 'index',
@@ -50,7 +118,15 @@ function ensureChartFor(canvasId) {
           callbacks: {
             label: ctx => {
               const value = ctx.parsed.y;
-              return Number.isFinite(value) ? `${ctx.dataset.label}: ${value}` : `${ctx.dataset.label}: --`;
+              if (!Number.isFinite(value)) return `${ctx.dataset.label}: --`;
+              
+              // Extract the unit from the display name if possible
+              const label = ctx.dataset.label;
+              const match = label.match(/.*\((.*?)\)/);
+              const unit = match ? ` ${match[1]}` : '';
+              
+              // Format the value with the unit
+              return `${label}: ${value}${unit}`;
             }
           }
         }
@@ -64,6 +140,21 @@ function ensureChartFor(canvasId) {
   return el._chart;
 }
 
+// Helper function to get numeric value from row
+function getNumericValue(row, key) {
+  const numKey = `${key}_num`;
+  if (numKey in row) {
+    return row[numKey];
+  }
+  // Fallback to parsing the string value
+  const rawKey = key;
+  if (rawKey in row) {
+    const str = String(row[rawKey]).replace(/[^\d.-]/g, '');
+    return parseFloat(str);
+  }
+  return NaN;
+}
+
 /** Build {x,y} datasets from newest-first rows for specified keys */
 function buildDatasets(rowsNewestFirst, keys, limit = CHART_MAX_LOGS) {
   if (!Array.isArray(rowsNewestFirst) || !rowsNewestFirst.length) return [];
@@ -72,11 +163,20 @@ function buildDatasets(rowsNewestFirst, keys, limit = CHART_MAX_LOGS) {
   return keys.map(key => {
     const data = rows.map(r => {
       const d = new Date(r.timestamp.replace(' ', 'T'));
-      const raw = (key + '_num') in r ? r[key + '_num'] : r[key];
-      const y = Number.isFinite(+raw) ? +raw : parseFloat(String(raw));
-      return (!isNaN(d) && Number.isFinite(y)) ? { x: d, y } : { x: d, y: NaN };
+      const y = getNumericValue(r, key);
+      const point = (!isNaN(d) && Number.isFinite(y)) ? { x: d, y } : { x: d, y: NaN };
+      console.log(`Processing ${key}: ${y}`); // Debug logging
+      return point;
     });
-    return { label: key, data };
+    return { 
+      label: DISPLAY_NAMES[key.toLowerCase()] || key, // Use friendly name if available
+      data,
+      borderWidth: 2,
+      fill: false, // Add this to make lines more visible
+      borderColor: key.includes('Voltage') ? '#2196F3' : 
+                  key.includes('Current') ? '#4CAF50' : 
+                  key.includes('Power') ? '#FFC107' : '#FF5722'
+    };
   });
 }
 
@@ -104,9 +204,16 @@ function renderTableFromJson(rowsNewestFirst) {
   }
   const cols = Array.from(colSet);
 
-  thead.innerHTML = `<tr>${cols.map(c => `<th>${c === 'timestamp' ? 'Time Stamp' : c}</th>`).join('')}</tr>`;
+  thead.innerHTML = `<tr>${cols.map(c => 
+    `<th>${DISPLAY_NAMES[c] || c}</th>`
+  ).join('')}</tr>`;
   tbody.innerHTML = rows.map(r =>
-    `<tr>${cols.map(c => `<td>${r[c] ?? ''}</td>`).join('')}</tr>`
+    `<tr>${cols.map(c => {
+      const value = r[c] ?? '';
+      const label = DISPLAY_NAMES[c] || c;
+      // Add data-label for mobile view and title for hover
+      return `<td data-label="${label}" title="${label}: ${value}">${value}</td>`;
+    }).join('')}</tr>`
   ).join('') || `<tr><td colspan="${cols.length}" style="text-align:center; color:#6c757d;">No data</td></tr>`;
 }
 
@@ -116,19 +223,20 @@ function updateCompass(latestRow) {
   const valueEl = document.getElementById('compass-value');
   if (!arrow || !valueEl || !latestRow) return;
 
-  const dirKey = Object.keys(latestRow).find(k => k.toLowerCase().includes('wind direction'));
-  if (!dirKey) return;
+  // Get wind direction value
+  const direction = getNumericValue(latestRow, 'Wind Direction');
+  if (!Number.isFinite(direction)) return;
 
-  const dirRaw = latestRow[dirKey + '_num'] ?? parseFloat(String(latestRow[dirKey]).replace(/[^\d.-]/g, ''));
-  if (!Number.isFinite(dirRaw)) return;
+  console.log('Updating compass with direction:', direction); // Debug logging
 
   // rotate compass
-  arrow.style.transform = `translate(-50%, -100%) rotate(${dirRaw}deg)`;
-  valueEl.textContent = `Wind Direction: ${dirRaw.toFixed(0)} °`;
+  arrow.style.transform = `translate(-50%, -50%) rotate(${direction}deg)`;
+  valueEl.textContent = `Wind Direction: ${direction.toFixed(0)}°`;
+  
 }
 
 
-/** Fetch once, then update table + both charts */
+/** Fetch once, then update table + all charts */
 function fetchAndRenderAll() {
   const url = `./sensorData.php?format=json&max=${Math.max(TABLE_MAX_LOGS, CHART_MAX_LOGS)}`;
   const msg = document.getElementById('refresh-message');
@@ -137,6 +245,7 @@ function fetchAndRenderAll() {
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`); return r.json(); })
     .then(rowsNewestFirst => {
       if (!Array.isArray(rowsNewestFirst)) return;
+      console.log('Data received:', rowsNewestFirst[0]); // Log the latest data point
 
       // Table
       renderTableFromJson(rowsNewestFirst);
@@ -144,50 +253,103 @@ function fetchAndRenderAll() {
       // Compass: latest wind direction (first element = newest)
       updateCompass(rowsNewestFirst[0]);
 
-      // Battery indicator: update from latest System Voltage
+      // Update power indicators from latest values
       if (rowsNewestFirst[0]) {
         const latest = rowsNewestFirst[0];
-        const voltKey = Object.keys(latest).find(k => k.toLowerCase().includes('system voltage'));
-        if (voltKey) {
-          const voltage = parseFloat(latest[voltKey]) || 0;
-          updateBatteryIndicator(voltage);
-        }
+        
+        // Update battery voltage and status
+        const voltage = getNumericValue(latest, 'Battery Voltage');
+        updateBatteryIndicator(voltage);
+        
+        // Update power values
+        const solarPower = document.getElementById('solar-power');
+        const batteryPower = document.getElementById('battery-power');
+        const systemPower = document.getElementById('system-power');
+        
+        if (solarPower) solarPower.textContent = `${getNumericValue(latest, 'Solar Power').toFixed(3)} W`;
+        if (batteryPower) batteryPower.textContent = `${getNumericValue(latest, 'Battery Power').toFixed(3)} W`;
+        if (systemPower) systemPower.textContent = `${getNumericValue(latest, 'System Power').toFixed(3)} W`;
       }
 
-      // Charts
-      const envChart = ensureChartFor('chartEnv');
-      const powerChart = ensureChartFor('chartPower');
+      // Left Column - Sensor Charts
       const tempChart = ensureChartFor('chartTemp');
+      const humidChart = ensureChartFor('chartHumid');
+      const windChart = ensureChartFor('chartWind');
+      
+      // Right Column - Power Charts
       const voltageChart = ensureChartFor('chartVoltage');
+      const currentChart = ensureChartFor('chartCurrent');
+      const powerChart = ensureChartFor('chartPower');
 
-      if (envChart) {
-        const ds = buildDatasets(rowsNewestFirst, ENV_KEYS);
-        envChart.data.datasets = ds;
-        applyDailyWindow(envChart);
-        envChart.update('none');
-      }
-      if (powerChart) {
-        const ds = buildDatasets(rowsNewestFirst, POWER_KEYS);
-        powerChart.data.datasets = ds;
-        applyDailyWindow(powerChart);
-        powerChart.update('none');
-      }
+      // Update Sensor Charts
       if (tempChart) {
-        const ds = buildDatasets(rowsNewestFirst, TEMP_KEY);
+        tempChart.options.scales.y = {
+          beginAtZero: false,
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, TEMP_KEYS);
         tempChart.data.datasets = ds;
         applyDailyWindow(tempChart);
         tempChart.update('none');
       }
+
+      if (humidChart) {
+        humidChart.options.scales.y = {
+          beginAtZero: true,
+          min: 0,
+          max: 100,
+          grace: '5%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, HUMID_KEYS);
+        humidChart.data.datasets = ds;
+        applyDailyWindow(humidChart);
+        humidChart.update('none');
+      }
+
+      if (windChart) {
+        windChart.options.scales.y = {
+          beginAtZero: true,
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, WIND_KEYS);
+        windChart.data.datasets = ds;
+        applyDailyWindow(windChart);
+        windChart.update('none');
+      }
+
+      // Update Power Charts
       if (voltageChart) {
         voltageChart.options.scales.y = {
           beginAtZero: true,
           min: 0,
-          grace: '10%'};
-
-        const ds = buildDatasets(rowsNewestFirst, VOLTAGE_KEY);
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, VOLTAGE_KEYS);
         voltageChart.data.datasets = ds;
         applyDailyWindow(voltageChart);
         voltageChart.update('none');
+      }
+
+      if (currentChart) {
+        currentChart.options.scales.y = {
+          beginAtZero: false,
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, CURRENT_KEYS);
+        currentChart.data.datasets = ds;
+        applyDailyWindow(currentChart);
+        currentChart.update('none');
+      }
+
+      if (powerChart) {
+        powerChart.options.scales.y = {
+          beginAtZero: true,
+          grace: '10%'
+        };
+        const ds = buildDatasets(rowsNewestFirst, POWER_KEYS);
+        powerChart.data.datasets = ds;
+        applyDailyWindow(powerChart);
+        powerChart.update('none');
       }
 
       if (msg) {
@@ -198,46 +360,112 @@ function fetchAndRenderAll() {
       console.error('Fetch error:', err);
       const thead = document.getElementById('sensor-head');
       const tbody = document.getElementById('sensor-data-body');
+      const msg = document.getElementById('refresh-message');
+      
       if (thead) thead.innerHTML = '<tr><th>Time Stamp</th><th>Error</th></tr>';
       if (tbody) tbody.innerHTML = "<tr><td colspan='2' class='error'>Failed to load data from server.</td></tr>";
+      if (msg) msg.textContent = `Error loading data. Last attempt: ${new Date().toLocaleTimeString()}`;
     });
 
 }
 /** Update battery indicator in the header */
 function updateBatteryIndicator(voltage) {
   const batteryText = document.getElementById('battery-text');
-  const batteryIcon = document.getElementById('battery-icon');
+  // Note: there are two battery-icon elements, one in header and one in power flow
+  const batteryIcon = document.querySelector('.battery-status #battery-icon');
   const batteryStatus = document.querySelector('.battery-status');
+  const solarPower = document.getElementById('solar-power');
+  const batteryPower = document.getElementById('battery-power');
+  const systemPower = document.getElementById('system-power');
 
-  if (!batteryText || !batteryIcon || !batteryStatus) return;
-
-  // Calculate percentage between 2.7V (empty) and 4.5V (full)
-  const percent = ((voltage - 2.7) / (4.5 - 2.7)) * 100;
-  const clamped = Math.min(100, Math.max(0, percent));
-
-  // Update text: voltage + percentage
-  batteryText.textContent = `${voltage.toFixed(2)} V | ${clamped.toFixed(0)}%`;
-
-  // Remove previous color classes
-  batteryStatus.classList.remove('battery-full', 'battery-medium', 'battery-low');
-
-  // Set icon and color based on % charge
-  if (clamped > 70) {
-    batteryIcon.textContent = "🔋"; // Full
-    batteryStatus.classList.add('battery-full');
-  } else if (clamped > 40) {
-    batteryIcon.textContent = "🪫"; // Medium
-    batteryStatus.classList.add('battery-medium');
-  } else {
-    batteryIcon.textContent = "⚠️"; // Low
-    batteryStatus.classList.add('battery-low');
+  // Skip update if elements aren't found
+  if (!batteryText || !batteryIcon || !batteryStatus) {
+    console.warn('Battery indicator elements not found');
+    return;
   }
+
+  try {
+    // Calculate percentage between 2.7V (empty) and 4.5V (full)
+    const percent = ((voltage - 2.7) / (4.5 - 2.7)) * 100;
+    const clamped = Math.min(100, Math.max(0, percent));
+    
+    console.log('Battery voltage:', voltage, 'Percentage:', clamped); // Debug logging
+
+    // Update text: voltage + percentage
+    batteryText.textContent = `${voltage.toFixed(2)} V | ${clamped.toFixed(0)}%`;
+
+    // Remove previous color classes
+    batteryStatus.classList.remove('battery-full', 'battery-medium', 'battery-low');
+
+    // Set icon and color based on % charge
+    if (clamped > 70) {
+      batteryIcon.textContent = "🔋"; // Full
+      batteryStatus.classList.add('battery-full');
+    } else if (clamped > 40) {
+      batteryIcon.textContent = "🪫"; // Medium
+      batteryStatus.classList.add('battery-medium');
+    } else {
+      batteryIcon.textContent = "⚠️"; // Low
+      batteryStatus.classList.add('battery-low');
+    }
+  } catch (err) {
+    console.warn('Error updating battery indicator:', err);
+  }
+}
+
+/** Handle chart resizing and zoom */
+function setupChartResizeHandling() {
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const canvas = entry.target.querySelector('canvas');
+      if (canvas && canvas._chart) {
+        // Update chart dimensions
+        canvas._chart.options.devicePixelRatio = window.devicePixelRatio || 1;
+        canvas._chart.resize();
+      }
+    }
+  });
+
+  // Observe all chart cards
+  document.querySelectorAll('.chart-card').forEach(card => {
+    resizeObserver.observe(card);
+  });
+
+  // Handle zoom events through window resize
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      document.querySelectorAll('canvas').forEach(canvas => {
+        if (canvas._chart) {
+          canvas._chart.options.devicePixelRatio = window.devicePixelRatio || 1;
+          canvas._chart.resize();
+        }
+      });
+    }, 250);
+  });
 }
 
 /** Start periodic refresh */
 function startApp() {
+  // Set initial dropdown value from localStorage
+  const recordCount = document.getElementById('recordCount');
+  if (recordCount) {
+    const savedValue = localStorage.getItem('tableMaxLogs');
+    if (savedValue) {
+      recordCount.value = savedValue;
+      TABLE_MAX_LOGS = parseInt(savedValue);
+    }
+  }
+
   fetchAndRenderAll();
   setInterval(fetchAndRenderAll, FETCH_EVERY_MS);
+  setupChartResizeHandling();
 }
 
-startApp();
+// Wait for DOM content to be fully loaded before starting
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}

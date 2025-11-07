@@ -1,0 +1,57 @@
+# System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE Files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*~
+
+# Node.js (in case you add npm packages later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# PHP
+vendor/
+composer.lock
+*.log
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+config.php
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# Sensor Data (if you want to exclude actual sensor readings from version control)
+sensor_log.txt
+
+# Build output
+dist/
+build/
+out/
+
+# Debug files
+debug.log
+error_log
+php_errors.log
+
+# Operating System Generated Files
+$RECYCLE.BIN/
+.Trashes
+.Spotlight-V100
+
+# Agents Files
+-AGENTS.md
