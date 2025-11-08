@@ -270,6 +270,54 @@ function updateCompass(latestRow) {
   valueEl.textContent = `Wind Direction: ${direction.toFixed(0)}°`;
 }
 
+/** Update power flow diagram based on latest data */
+function updatePowerFlow(latestRow) {
+  if (!latestRow) return;
+
+  // Get power values
+  const solarPower = getNumericValue(latestRow, 'Solar Power');
+  const batteryPower = getNumericValue(latestRow, 'Battery Power');
+  const systemPower = getNumericValue(latestRow, 'System Power');
+
+  // Update display values
+  const solarValueEl = document.getElementById('solar-power-value');
+  const batteryValueEl = document.getElementById('battery-power-value');
+  const loadValueEl = document.getElementById('load-power-value');
+
+  if (solarValueEl && Number.isFinite(solarPower)) {
+    solarValueEl.textContent = `${solarPower.toFixed(2)} W`;
+    solarValueEl.className = 'power-node-value ' + (solarPower >= 0 ? 'positive' : 'negative');
+  }
+
+  if (batteryValueEl && Number.isFinite(batteryPower)) {
+    batteryValueEl.textContent = `${batteryPower.toFixed(2)} W`;
+    batteryValueEl.className = 'power-node-value ' + (batteryPower >= 0 ? 'positive' : 'negative');
+  }
+
+  if (loadValueEl && Number.isFinite(systemPower)) {
+    loadValueEl.textContent = `${Math.abs(systemPower).toFixed(2)} W`;
+    loadValueEl.className = 'power-node-value positive';
+  }
+
+  // Update arrow states based on power flow
+  const arrowSolarController = document.getElementById('arrow-solar-controller');
+  const arrowBatteryController = document.getElementById('arrow-battery-controller');
+  const arrowControllerLoad = document.getElementById('arrow-controller-load');
+
+  if (arrowSolarController) {
+    arrowSolarController.className = 'power-arrow solar-to-battery ' + (solarPower > 0 ? 'active' : 'inactive');
+  }
+
+  if (arrowBatteryController) {
+    // Battery discharging (positive) means it's powering the load
+    arrowBatteryController.className = 'power-arrow battery-to-load ' + (batteryPower > 0 ? 'active' : 'inactive');
+  }
+
+  if (arrowControllerLoad) {
+    arrowControllerLoad.className = 'power-arrow solar-to-load ' + (systemPower < 0 ? 'active' : 'inactive');
+  }
+}
+
 
 /** Fetch once, then update table + all charts */
 function fetchAndRenderAll() {
@@ -287,6 +335,9 @@ function fetchAndRenderAll() {
 
       // Compass: latest wind direction (first element = newest)
       updateCompass(rowsNewestFirst[0]);
+
+      // After updateCompass call, add:
+      updatePowerFlow(rowsNewestFirst[0]);
 
       // Update battery status from latest values
       if (rowsNewestFirst[0]) {

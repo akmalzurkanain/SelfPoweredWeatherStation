@@ -30,6 +30,67 @@
       </div>
     </div>
 
+    <!-- Add Power Flow Card Here -->
+      <div class="power-flow-card">
+        <div class="power-flow-diagram">
+          <!-- Solar Node (left, aligned with controller) -->
+          <div class="power-node" style="left: 5%; top: 30%; transform: translateY(-50%);">
+            <div class="power-node-icon">☀️</div>
+            <div class="power-node-label">Solar</div>
+            <div class="power-node-value" id="solar-power-value">-- W</div>
+          </div>
+
+          <!-- Battery Node (bottom center, well below controller) -->
+          <div class="power-node" style="left: 50%; bottom: 5%; transform: translateX(-50%);">
+            <div class="power-node-icon">🔋</div>
+            <div class="power-node-label">Battery</div>
+            <div class="power-node-value" id="battery-power-value">-- W</div>
+          </div>
+
+          <!-- Load Node (right, aligned with controller) -->
+          <div class="power-node" style="right: 5%; top: 30%; transform: translateY(-50%);">
+            <div class="power-node-icon">💡</div>
+            <div class="power-node-label">Load</div>
+            <div class="power-node-value" id="load-power-value">-- W</div>
+          </div>
+
+          <!-- Controller Node (center, same line as solar and load) -->
+          <div class="controller-node">⚡</div>
+
+          <!-- SVG for arrows -->
+          <svg class="power-flow-arrows" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <marker id="arrowhead-orange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                <polygon points="0 0, 10 3, 0 6" fill="#FF9800" />
+              </marker>
+              <marker id="arrowhead-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                <polygon points="0 0, 10 3, 0 6" fill="#4CAF50" />
+              </marker>
+              <marker id="arrowhead-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                <polygon points="0 0, 10 3, 0 6" fill="#2196F3" />
+              </marker>
+            </defs>
+
+            <!-- Solar to Controller (horizontal) -->
+            <path id="arrow-solar-controller" class="power-arrow solar-to-battery" d="M 18 30 L 43 30"
+              marker-end="url(#arrowhead-orange)" />
+
+            <!-- Controller to Battery (downward) -->
+            <path id="arrow-controller-battery" class="power-arrow solar-to-battery" d="M 50 37 L 50 80"
+              marker-end="url(#arrowhead-orange)" />
+
+            <!-- Battery to Controller (upward) -->
+            <path id="arrow-battery-controller" class="power-arrow battery-to-load" d="M 50 80 L 50 37"
+              marker-end="url(#arrowhead-blue)" />
+
+            <!-- Controller to Load (horizontal) -->
+            <path id="arrow-controller-load" class="power-arrow solar-to-load" d="M 57 30 L 82 30"
+              marker-end="url(#arrowhead-green)" />
+          </svg>
+        </div>
+        <h3 class="power-flow-title">Power Flow System</h3>
+      </div>
+
     <div class="chart-columns">
       <!-- Left Column - Sensor Charts -->
       <div class="chart-column sensor-column">
